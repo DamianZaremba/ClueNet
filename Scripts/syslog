@@ -1,0 +1,52 @@
+#!/usr/bin/php
+<?PHP
+	declare(ticks = 1);
+
+	function sig_handler($signo) {
+		switch ($signo) {
+			case SIGCHLD:
+				while (($x = pcntl_waitpid(0, $status, WNOHANG)) != -1) {
+					if ($x == 0) break;
+					$status = pcntl_wexitstatus($status);
+				}
+				break;
+		}
+	}
+	pcntl_signal(SIGCHLD,   "sig_handler");
+	$udp = socket_create(AF_INET,SOCK_DGRAM,SOL_UDP);
+	socket_bind($udp,'0.0.0.0',3335);
+	while (1) {
+		$irc = fsockopen('tcp://69.162.70.187',6667,$en,$es,30);
+		if (!$irc) {
+			die($en.' - '.$es."\n");
+		}
+		fwrite($irc,'USER Syslog "1" "1" :Syslog'."\n".'NICK Syslog'."\n");
+		fwrite($irc,'OPER syslog ****Yeah right.....****'."\n"); // Stop it getting kaboombed for flooding so easily
+
+
+		if (pcntl_fork() == 0) {
+			while (!feof($irc)) {
+				$data = str_replace(array("\n","\r"),'',fgets($irc,1024));
+				$d = explode(' ',$data);
+				if (strtolower($d[0]) == 'ping') {
+					fwrite($irc,'PONG '.$d[1]."\n");
+				} elseif ((strtolower($d[1]) == '422') or (strtolower($d[1]) == '376')) {
+					fwrite($irc,'join #syslog');
+				}
+			}
+			die();
+		}
+
+		while (!feof($irc)) {
+			$buf = '';
+			$ip = '';
+			$port = 0;
+			socket_recvfrom($udp,$buf,512,0,$ip,$port);
+			$buf = explode(' ',$buf,4); $buf = $buf[3];
+			fwrite($irc,'PRIVMSG #Syslog :('.dechex(ip2long($ip)).') '.$buf."\n");
+			
+			//echo $buf."\n";
+			unset($buf);
+		}
+	}
+?>
