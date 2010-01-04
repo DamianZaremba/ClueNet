@@ -1,0 +1,32 @@
+dn: cn=sine,ou=servers,dc=cluenet,dc=org
+objectClass: server
+objectClass: serviceRequirementObject
+objectClass: vpnEndpoint
+cn: sine
+owner: uid=dvyjones,ou=people,dc=cluenet,dc=org
+sshPort: 22
+purpose: Shell server
+networkTxSpeed: 10000
+networkRxSpeed: 10000
+isOfficial: TRUE
+cpuSpeed: 2500
+ramSize: 360
+networkLan: linode-newark
+cpuType: Intel(R) Xeon(R) CPU (Shared)
+userAccessible: TRUE
+serviceRequirement: shellaccess:ssh,sshd,su,sudo,atd,cron,passwd,login:basicsh
+ ellquestions.75,basicmiscquestions.75, aboutmeessay.75,shellusageessay.75,com
+ munitycontributeessay.50,blankspaceessay.40,tosquestions.100,cluepoints.300
+hddSize: 16
+operatingSystem: Debian 5.0 (Lenny)
+authorizedAdministrator: uid=grawity,ou=people,dc=cluenet,dc=org
+authorizedAdministrator: uid=lordlandon,ou=people,dc=cluenet,dc=org
+authorizedAdministrator: uid=frozenfire,ou=people,dc=cluenet,dc=org
+authorizedAdministrator: uid=jercos,ou=people,dc=cluenet,dc=org
+internalAddress: 10.156.4.97
+ipv6Address:: Ojox
+ipv6ReverseZonePrefixLength: 48
+description: Sine was a shell server owned by Dvyjones, before he left Cluenet.
+ipAddress: 97.107.131.74
+isActive: FALSE
+

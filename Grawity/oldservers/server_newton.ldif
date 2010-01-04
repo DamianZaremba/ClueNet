@@ -1,0 +1,27 @@
+dn: cn=newton,ou=servers,dc=cluenet,dc=org
+objectClass: server
+objectClass: serviceRequirementObject
+objectClass: vpnEndpoint
+cn: newton
+owner: uid=crispy,ou=people,dc=cluenet,dc=org
+userAccessible: TRUE
+sshPort: 22
+isActive: TRUE
+isOfficial: TRUE
+description: Newton is a general purpose shell server.
+serverRules: default
+cpuType: Pentium III (Coppermine)
+cpuSpeed: 600
+ramSize: 256
+operatingSystem: Debian 4.0
+networkLan: crispy-home
+networkRxSpeed: 3000
+networkTxSpeed: 500
+ipAddress: 69.61.141.122
+hddSize: 10
+purpose: Shell server
+serviceRequirement: shellaccess:ssh,sshd,su,sudo,atd,cron,passwd,login:basicsh
+ ellquestions.75,basicmiscquestions.75,aboutmeessay.75,shellusageessay.75,comm
+ unitycontributeessay.50,blankspaceessay.40,tosquestions.100,cluepoints.750,ne
+ tadminshellvote.65
+

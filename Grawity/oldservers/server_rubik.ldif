@@ -1,0 +1,29 @@
+dn: cn=rubik,ou=servers,dc=cluenet,dc=org
+objectClass: server
+objectClass: serviceRequirementObject
+objectClass: vpnEndpoint
+cn: rubik
+owner: uid=wildrover,ou=people,dc=cluenet,dc=org
+userAccessible: TRUE
+sshPort: 22
+isOfficial: TRUE
+description: Rubik is a general purpose shell and web (userdir) server. It als
+ o hosts ClueTerm for webbased shell access to Cluenet servers. Rubik runs Bit
+ lBee on port 6668.
+serverRules: The usual. There are currently no limits. If they become neccesar
+ y, there will be. If you have any questions or requests, just drop them at wi
+ ldrover@cluenet.org or ask me on #clueirc and I'll see what I can do for you.
+cpuType: Quad Xeon (Shared with other VPSs)
+cpuSpeed: 2330
+ramSize: 512
+operatingSystem: Fedora 9
+networkLan: wildrover-home
+networkRxSpeed: 0
+networkTxSpeed: 0
+ipAddress: 79.170.90.65
+ipv6Address: 2a02:348:35:5a38::1
+purpose: Shell
+purpose: Web server
+hddSize: 40
+isActive: FALSE
+

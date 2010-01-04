@@ -1,0 +1,464 @@
+#!/bin/bash
+# supermegaleet ClueNet script collection
+# (c) 2009 <grawity@gmail.com>
+# Relased under WTFPL v2.0 <http://sam.zoy.org/wtfpl/>
+
+source ~/bin/cn.common || exit
+
+cmd="${1%%:*}"
+
+if [[ "$1" = *:* ]]
+	then action="${1#*:}"
+	else action=""
+fi
+
+if ! [ "$TERM" = tty ]; then
+	B="$( tput bold )"
+	N="$( tput sgr0 )"
+fi
+
+if [ -z "$cmd" ]; then
+	echo "supermegaleet ClueNet script collection, by grawity"
+	echo ""
+	echo "Commands:"
+	echo "  access             user access to servers"
+	echo "  api                API calls"
+	echo "  davinci|dv         DaVinci (Cluebot) access"
+	echo "  dns                misc DNS functions"
+	echo "  dnsalias           DNS aliases"
+	echo "  server             server entries"
+	echo "  serveradmin|adm    authorizedAdmin access to servers"
+	echo "  vouch              generation of initial vouch codes"
+	exit
+fi
+
+case "$cmd" in
+########################################################################
+api)
+	shift
+	api "$@"
+	;;
+
+########################################################################
+server)
+	if [ -z "$action" ]; then
+		echo "$cmd commands:"
+		echo ""
+		echo "  $cmd:list             [<ldapfilter>]"
+		echo "  $cmd:show             <hostname>"
+		echo ""
+		echo "  $cmd:set              <hostname> <attribute> <value>"
+		echo "  $cmd:addattr          <hostname> <attribute> <value>"
+		echo "  $cmd:delattr          <hostname> <attribute> <value>"
+		echo ""
+		echo "  $cmd:add              <hostname> <ip>|cname:<dest> <owner>"
+		echo "  $cmd:del              <hostname>"
+		echo ""
+		echo "  $cmd:getkeytab|getkt  <hostname> [<service>]"
+		exit
+	fi
+	check_ticket
+
+	case "$action" in
+	list)
+		filter="${2:-cn}"
+		
+		ldapsearch -ZxLLL -b "ou=servers,dc=cluenet,dc=org" "$filter" cn |
+			sed -n '/^cn:/ s/^.*: //p'
+		;;
+
+	show)
+		[ -z "$2" ] &&
+			die "Usage: $cmd:$action <hostname>"
+		
+		hostname="${2%.cluenet.org}"
+
+		ldapsearch -ZxLLL -b "ou=servers,dc=cluenet,dc=org" "cn=${hostname}" "*"
+		;;
+
+	set|addattr|delattr)
+		[ -z "$2" -o -z "$3" -o -z "$4" ] &&
+			die "Usage: $cmd:$action <hostname> <attribute> <value>"
+
+		case "$action" in
+		set*) ldap_action="replace";;
+		add*) ldap_action="add";;
+		del*) ldap_action="delete";;
+		esac
+		
+		hostname="${2%.cluenet.org}"
+		attribute="$3"
+		value="$4"
+		
+		check_server "$hostname" || die "Cannot modify ${hostname}.cluenet.org: Does not exist"
+		
+		[ "$value" = "true" -o "$value" = "false" ] &&
+			value="${value^^}"
+
+		echo "Modifying cn=${hostname}: ${attribute}=${value}"
+		ldapedit "cn=${hostname},ou=servers" "$ldap_action" "$attribute: $value"
+		;;
+
+	add)
+		[ -z "$3" -o -z "$4" ] &&
+			die "Usage: $cmd:$action <hostname> <ip>|cname:<dest> <owner>"
+
+		hostname="${2%.cluenet.org}"
+		ip="$3"
+		owner="$4"
+
+		#check_hostname "$hostname" && die "Cannot add ${hostname}.cluenet.org: Already exists"
+		#check_user "$owner" || die "Cannot set $owner as owner: No such user"
+
+		if [[ "$ip" = cname:* ]]; then
+			preresolve=FALSE
+			ip="${ip#cname:}"
+		else
+			preresolve=TRUE
+		fi
+
+		if [[ "$ip" =~ :[0-9]+$ ]]; then
+			port="${ip##*:}"
+			ip="${ip%:*}"
+		else
+			port="22"
+		fi
+
+		echo "Adding server ${hostname}.cluenet.org, owned by ${owner}"
+		
+		ldapadd -ZQ <<EOLDIF
+dn: cn=${hostname},ou=servers,dc=cluenet,dc=org
+objectClass: server
+objectClass: serviceRequirementObject
+ipAddress: ${ip}
+preresolveHostname: ${preresolve}
+sshPort: ${port}
+owner: uid=${owner},ou=people,dc=cluenet,dc=org
+isActive: TRUE
+userAccessible: TRUE
+isOfficial: FALSE
+EOLDIF
+		;;
+
+	del)
+		[ -z "$2" ] &&
+			die "Usage: $cmd:$action <hostname>"
+
+		hostname="${2%.cluenet.org}"
+
+		cn server:show "$hostname" >> "server_${hostname}.ldif"
+
+		echo "Removing $hostname from servers"
+		ldapdelete -ZQ "cn=${hostname},ou=servers,dc=cluenet,dc=org"
+		;;
+
+	getkeytab|getkt)
+		[ -z "$2" ] &&
+			die "Usage: $cmd:$action [<service>/]<hostname>"
+
+		hostname="${2%.cluenet.org}"
+		if [[ "$hostname" = */* ]]; then
+			service="${hostname%%/*}"
+			hostname="${hostname#*/}"
+		else
+			service="host"
+		fi
+
+		princ="${service}/${hostname}.cluenet.org@CLUENET.ORG"
+		ktfile="${service}.${hostname}.cluenet.org.keytab"
+		
+		umask 077; api hostadm getkeytab "$princ" > "$ktfile"
+		[ $? -eq 0 ] && echo "Keytab for $princ stored in $ktfile"
+		;;
+
+	*) die "Invalid subcommand $cmd:$action"
+	esac
+	;;
+
+########################################################################
+vouch)
+	[ -z "$2" ] &&
+		die "Usage: $cmd <nick>"
+	check_ticket
+
+	api useradm initialvouch "$2"
+	#shift; cn.vouch "$@"
+	;;
+
+########################################################################
+cluebot|davinci|dv)
+	if [ -z "$action" ]; then
+		echo "$cmd commands:"
+		echo "  $cmd:points      <nick>"
+		echo "  $cmd:dump        <nick>"
+		echo ""
+		echo "  $cmd:dumpheader"
+		exit 1
+	fi
+	check_ticket
+
+	case "$action" in
+	points|dump)
+		[ -z "$2" ] &&
+			die "Usage: $cmd:$action <nick>"
+
+		if [ "$2" = "all" ]
+			then nick=""
+			else nick="$2"
+		fi
+
+		api irc cluebot "$action" "$nick"
+		;;
+	
+	dumpheader)
+		api irc cluebot "$action"
+		;;
+	
+	*) die "Invalid subcommand $cmd:$action"
+	esac
+	;;
+
+########################################################################
+access|serveraccess)
+	if [ -z "$action" ]; then
+		echo "Usage:"
+		echo "  $cmd:add <user> <hostname> [<service>]"
+		echo "  $cmd:del <user> <hostname> [<service>]"
+		exit 1
+	fi
+	check_ticket
+
+	[ -z "$2" -o -z "$3" ] &&
+		die "Usage: $cmd:$action <user> <hostname> [<service>]"
+
+	user="${2:-$LOGNAME}"
+	hostname="${3%.cluenet.org}"
+	service="${4:-*}"
+
+	check_user "$user" || die "Unknown user $user"
+	check_hostname "$hostname" || die "Unknown server $hostname"
+
+	case "$action" in
+	add)
+		cn.authorize "$user" "$hostname" "$service"
+		;;
+	del)
+		cn.authorize -d "$user" "$hostname" "$service"
+		;;
+
+	*) die "Invalid subcommand $cmd:$action"
+	esac
+	;;
+
+########################################################################
+serveradmin|adm)
+	if [ -z "$action" ]; then
+		echo "$cmd commands:"
+		echo "  $cmd:list         <hostname>"
+		echo "  $cmd:add          <user> <hostname>"
+		echo "  $cmd:del          <user> <hostname>"
+		echo ""
+		echo "  $cmd:listservers  <user>"
+		exit 1
+	fi
+	check_ticket
+
+	case "$action" in
+	list)
+		[ -z "$2" ] &&
+			die "Usage: $cmd:$action <hostname>"
+
+		hostname="${2%.cluenet.org}"
+		check_server "$hostname" || die "Server ${hostname}.cluenet.org does not exist"
+
+		ldapsearch -ZxLLL -b "ou=servers,dc=cluenet,dc=org" "cn=${hostname}" \
+			owner authorizedAdministrator \
+			| sed -n \
+			-e '/^owner:/ s/^.*: uid=\(.*\),ou=people,dc=cluenet,dc=org$/\1 [owner]/ip' \
+			-e '/^authorizedAdministrator:/ s/^.*: uid=\(.*\),ou=people,dc=cluenet,dc=org$/\1/ip'
+		exit
+		;;
+	
+	listservers)
+		[ -z "$2" ] &&
+			die "Usage: $cmd:$action <user>"
+
+		user="$2"
+		check_user "$user" || die "User $user does not exist"
+
+		ldapsearch -ZxLLL -b "ou=servers,dc=cluenet,dc=org" \
+			"authorizedAdministrator=uid=${user},ou=people,dc=cluenet,dc=org" cn \
+			| sed -n -e '/^cn:/ s/^cn: //p' | sort
+		exit
+		;;
+	esac
+
+	[ -z "$2" -o -z "$3" ] &&
+		die "Usage: $cmd:$action <user> <hostname>"
+
+	user="${2:-$myaccount}"
+	hostname="${3%.cluenet.org}"
+
+	check_user "$user" || die "User $user does not exist"
+
+	check_hostname "$hostname" ||
+		die "Server ${hostname}.cluenet.org does not exist"
+	
+	case "$action" in
+	add)
+		action="add"
+		echo "Adding $user as administrator of $hostname"
+		;;
+	del)
+		action="delete"
+		echo "Removing $user from administrators of $hostname"
+		;;
+	*) die "Invalid subcommand $cmd:$action"
+	esac
+	
+	ldapedit "cn=${hostname},ou=servers" "$action" "authorizedAdministrator: uid=${user},ou=people,dc=cluenet,dc=org"
+	;;
+
+########################################################################
+dnsalias|roundrobin|rr)
+	if [ -z "$action" ]; then
+	echo "Usage:"
+		echo "  $cmd:list       [<ldapfilter>]"
+		echo "  $cmd:show       <aliasname>"
+		echo "  $cmd:dump       <aliasname>"
+		echo ""
+		echo "  $cmd:addtarget  <aliasname> <targethost>"
+		echo "  $cmd:deltarget  <aliasname> <targethost>"
+		echo ""
+		echo "  $cmd:add        <aliasname> <owner>"
+		echo "  $cmd:del        <aliasname>"
+		exit 1
+	fi
+	check_ticket
+
+	case "$action" in
+	list)
+		filter="${2:-cn}"
+
+		ldapsearch -ZxLLL -b "ou=dnsaliases,dc=cluenet,dc=org" "$filter" cn |
+			sed -n '/^cn:/ s/^.*: //p'
+		;;
+	
+	show|targets)
+		[ -z "$2" ] &&
+			die "Usage: $cmd:$action <aliasname>"
+
+		rrname="${2%.cluenet.org}"
+
+		ldapsearch -ZxLLL -b "ou=dnsaliases,dc=cluenet,dc=org" "cn=$rrname" destinationHost owner |
+			sed -n \
+			-e "/^owner:/ s/^.*: uid=\\(.*\\),ou=people,dc=cluenet,dc=org\$/[owner: \1]/p" \
+			-e "/^destinationHost:/ s/^.*: /$rrname = /p"
+		;;
+
+	dump)
+		[ -z "$2" ] &&
+			die "Usage: $cmd:$action <aliasname>"
+
+		rrname="${2%.cluenet.org}"
+
+		check_dnsalias "$rrname" || die "${rrname}.cluenet.org not found"
+
+		ldapsearch -ZxLLL -b "ou=dnsaliases,dc=cluenet,dc=org" "cn=$rrname"
+		;;
+
+	addtarget|deltarget)
+		[ -z "$2" -o -z "$3" ] &&
+			die "Usage: $cmd:$action <aliasname> <targethost>"
+		check_ticket
+
+		rrname="${2%.cluenet.org}"
+		target="${3%.cluenet.org}"
+		targetfqdn="${target}.cluenet.org"
+		
+		#check_dnsalias "$rrname" || die "${rrname}.cluenet.org does not exist"
+		#check_hostname "$target" || die "target ${target}.cluenet.org does not exist"
+
+		case "$action" in
+		addtarget)
+			ldap_action="add"
+			echo "Adding $targetfqdn as target for $rrname"
+			;;
+		deltarget)
+			ldap_action="delete"
+			echo "Deleting $targetfqdn from targets for $rrname"
+			;;
+		esac
+
+		ldapedit "cn=${rrname},ou=dnsaliases" "$ldap_action" "destinationHost: $target"
+		;;
+
+	add)
+		[ -z "$2" -o -z "$3" ] &&
+			die "Usage: $cmd:$action <aliasname> <owner>"
+		check_ticket
+
+		aliasname="${2%.cluenet.org}"
+		owner="$3"
+
+		check_hostname "$aliasname" && die "${aliasname}.cluenet.org already exists"
+		check_user "$owner" || die "User $owner not found, cannot set as owner"
+
+		echo "Adding ${aliasname}.cluenet.org to DNS aliases with no targets"
+
+		ldapadd -ZQ <<EOLDIF
+dn: cn=${aliasname},ou=dnsaliases,dc=cluenet,dc=org
+objectClass: DNSAlias
+owner: uid=${owner},ou=people,dc=cluenet,dc=org
+EOLDIF
+		;;
+
+	del)
+		[ -z "$2" ] &&
+			die "Usage: $cmd:$action <aliasname>"
+		check_ticket
+			
+		aliasname="${2%.cluenet.org}"
+
+		echo "Removing $aliasname from DNS aliases"
+
+		ldapdelete -ZQ "cn=${aliasname},ou=dnsaliases,dc=cluenet,dc=org"
+		;;
+
+	*) die "Invalid command $cmd:$action"
+	esac
+	;;
+
+########################################################################
+dns)
+	if [ -z "$action" ]; then
+		echo "$cmd commands:"
+		echo "  $cmd:refresh"
+		exit
+	fi
+	check_ticket
+
+	case "$action" in
+	refresh)
+		api dns refresh
+		;;
+
+	*) die "Invalid subcommand $cmd:$action"
+	esac
+	;;
+
+########################################################################
+login)
+	princ="${2:-$myaccount}@CLUENET.ORG"
+	kinit "$princ"
+	;;
+
+logout)
+	klist -5s || die "You are not logged in."
+	kdestroy
+	echo "All Kerberos tickets destroyed."
+	;;
+
+########################################################################
+*) die "Invalid command $cmd"
+esac

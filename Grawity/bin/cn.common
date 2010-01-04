@@ -1,0 +1,42 @@
+#!/bin/bash
+
+myaccount="$LOGNAME"
+
+die() {
+	echo "$@" >&2
+	exit 1
+}
+
+check_ticket() {
+	klist -5s || kinit ${myaccount}@CLUENET.ORG
+	klist -5s || exit 1
+}
+
+which kinit > /dev/null || die "kinit not found"
+
+api() {
+	[ -z "$2" ] && die "Usage: api <command> <subcommand> [<parameters>]"
+	remctl "${1}.api.cluenet.org" "$@"
+}
+
+ldapcheck() {
+	ldapsearch -ZxLLL "$1" dn 2>/dev/null | grep -qs '^dn:'
+}
+ldapcheck_dn() {
+	ldapsearch -ZxLLL -b "$1,dc=cluenet,dc=org" dn 2>/dev/null | grep -qs '^dn:'
+}
+
+check_user() { ldapcheck_dn "uid=$1,ou=people"; }
+check_server() { ldapcheck_dn "cn=$1,ou=servers"; }
+check_dnsalias() { ldapcheck_dn "cn=$1,ou=dnsaliases"; }
+check_hostname() { check_server "$1" || check_dnsalias "$1"; }
+
+ldapedit() {
+	# usage: ldapedit <dn> [add|delete] <attribute: value>
+	ldapmodify -QZ <<EOF
+dn: ${1},dc=cluenet,dc=org
+changeType: modify
+${2}: ${3%%:*}
+${3}
+EOF
+}

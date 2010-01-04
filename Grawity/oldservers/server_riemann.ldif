@@ -1,0 +1,29 @@
+dn: cn=riemann,ou=servers,dc=cluenet,dc=org
+owner: uid=cchan,ou=people,dc=cluenet,dc=org
+userAccessible: TRUE
+ipAddress: riemann.64x.org
+objectClass: server
+objectClass: serviceRequirementObject
+objectClass: vpnEndpoint
+cpuType: Pentium III (Katmai)
+sshPort: 2888
+isActive: TRUE
+operatingSystem: Ubuntu 8.04
+hddSize: 64
+cpuSpeed: 500
+authorizedAdministrator: uid=grawity,ou=people,dc=cluenet,dc=org
+cn: riemann
+serverRules: Don't run anything on Riemann that opens a port. Axiom is for tha
+ t. If what you want to run doesn't run on SPARC, talk to me and we might work
+  something out.
+purpose: Shell server
+networkLan: Crazytales-home
+description: Riemann is on Crazytales's Lan. It's behind rcmigw and is accessi
+ ble via IPv6. SSH is accessible on IPv4 port 2888, and on IPv6 ports 22 and 2
+ 888. Its IPv6 address is 2002:45f4:b984:1:208:a1ff:fe5d:ef0b, and its LAN add
+ ress is 192.168.1.6.
+preresolveHostname: FALSE
+isOfficial: FALSE
+networkRxSpeed: 8000
+networkTxSpeed: 1500
+

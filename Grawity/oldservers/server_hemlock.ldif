@@ -1,0 +1,18 @@
+dn: cn=hemlock,ou=servers,dc=cluenet,dc=org
+objectClass: server
+objectClass: serviceRequirementObject
+objectClass: vpnEndpoint
+cn: hemlock
+owner: uid=aiuw,ou=people,dc=cluenet,dc=org
+userAccessible: TRUE
+sshPort: 22
+sshPort: 22222
+isOfficial: TRUE
+ramSize: 32
+ipAddress: 78.110.172.114
+purpose: Shell server
+description: Shell server.
+hddSize: 4
+operatingSystem: Debian Lenny
+isActive: FALSE
+

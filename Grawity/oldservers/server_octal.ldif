@@ -1,0 +1,24 @@
+dn: cn=octal,ou=servers,dc=cluenet,dc=org
+objectClass: server
+objectClass: serviceRequirementObject
+owner: uid=compwhizii,ou=people,dc=cluenet,dc=org
+preresolveHostname: FALSE
+isOfficial: FALSE
+cn: octal
+networkTxSpeed: 10000
+networkRxSpeed: 10000
+cpuType: Intel Xeon
+cpuSpeed: 2500
+hddSize: 16
+operatingSystem: Arch Linux
+description: Octal is CWii's VPS, avalible to ClueNet to provide services.
+isActive: TRUE
+networkLan: linode-newark
+serverRules: Access only by ClueNet admins under the permission of CWii, this 
+ server is used to host production non-cluenet websites and services
+userAccessible: FALSE
+purpose: JIRA and MySQL hosting
+ramSize: 540
+sshPort: 443
+ipAddress: 97.107.142.187
+
