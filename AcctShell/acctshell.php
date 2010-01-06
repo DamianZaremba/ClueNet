@@ -128,7 +128,7 @@ function verifynickserv(&$nick, &$nickservpw) {
 }
 
 function donewaccount() {
-	echo "Account signups are currently broken due to the lack of NickServ and the acctshell keytab\n"
+	echo "Account signups are currently broken due to the lack of NickServ and the acctshell keytab\n";
 	return;
 	echo "The requirements for a new account are:\n";
 	echo "  - A vouch code from an existing user with the ability to vouch.\n";
