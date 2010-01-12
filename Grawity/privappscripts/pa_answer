@@ -1,0 +1,37 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]; then
+	echo "Usage: $0 <RequirementID>"
+	exit 1
+fi
+
+MYDIR="`dirname $0`"
+
+REQID="$1"
+
+TYPE="`ldapsearch -xLLLb ou=requirements,dc=cluenet,dc=org requirementID=$REQID requirementType | grep ^requirementType | cut -d ' ' -f 2`"
+if [ "a$TYPE" = "a" ]; then echo Error.; exit 1; fi
+
+if [ "$TYPE" = "multiplechoicequestions" ]; then
+	$MYDIR/pa_answermc $REQID
+	exit $?
+fi
+
+if [ "$TYPE" = "shortanswerseries" ]; then
+	$MYDIR/pa_answershortanswers $REQID
+	exit $?
+fi
+
+if [ "$TYPE" = "essay" ]; then
+	$MYDIR/pa_answeressay $REQID
+	exit $?
+fi
+
+if [ "$TYPE" = "uservote" ]; then
+	$MYDIR/pa_answeruservote $REQID
+	exit $?
+fi
+
+echo "Unknown type."
+exit 1
+

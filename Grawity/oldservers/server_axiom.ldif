@@ -1,0 +1,30 @@
+dn: cn=axiom,ou=servers,dc=cluenet,dc=org
+objectClass: server
+objectClass: serviceRequirementObject
+objectClass: vpnEndpoint
+cn: axiom
+owner: uid=cchan,ou=people,dc=cluenet,dc=org
+authorizedAdministrator: uid=grawity,ou=people,dc=cluenet,dc=org
+purpose: Shell server
+userAccessible: TRUE
+sshPort: 22
+isActive: FALSE
+isOfficial: TRUE
+description: Axiom is ClueNet's first non-x86 server. It's a shell server.
+serverRules: Axiom's rules are pretty much the same as for the other shell ser
+ vers, but with one exception. I would like you to tell me if you're running a
+ nything on it that opens a port to the outside world. I just like to know who
+ 's doing what on my servers without using netstat. Also, I reserve the right 
+ to refuse you to run a listening daemon on the server. But I'm generally pret
+ ty lenient. Axiom runs BitlBee on port 6667.
+cpuType: Sun UltraSPARC 2i
+cpuSpeed: 300
+ramSize: 512
+hddSize: 20
+operatingSystem: Debian 4.0
+networkLan: Crazytales-home
+networkRxSpeed: 8000
+networkTxSpeed: 1500
+ipAddress: 98.209.35.71
+internalAddress: 10.156.4.65
+

@@ -1,0 +1,4 @@
+#!/bin/bash
+
+ldapsearch -xLLLb ou=requirements,dc=cluenet,dc=org objectClass=Requirement requirementID requirementOverview | sed -n '1h;2,$H;${g;s/\n //g;p}' | grep -v dn | sed 's/requirementID/Requirement ID/g' | sed 's/requirementOverview/Description/g'
+

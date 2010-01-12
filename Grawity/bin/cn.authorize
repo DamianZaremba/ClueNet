@@ -1,0 +1,66 @@
+#!/bin/bash
+source ~/bin/cn.common || exit
+# 0 = okay
+# 1 = access denied
+# 2 = change failed
+# 3 = no Kerberos ticket
+# 4 = unknown user
+
+if [ -z "$1" -o "$1" = "--help" ]; then
+	echo "Usage: $(basename $0) [-d] <username> [<host>] [<service>]"
+	echo ""
+	echo "If host is not specified (or is .), current hostname ($(hostname)) is used."
+	echo ""
+	echo "If service is not specified, * is used."
+	echo ""
+	echo "Use -d to revoke access."
+	echo ""
+	echo "Examples:"
+	echo "  $(basename $0) jsmith $(hostname)"
+	echo "  $(basename $0) -d jsmith . telnet"
+	exit
+fi
+
+if [ "$1" = "-d" ]
+	then action="del"; shift
+	else action="add"
+fi
+
+user="$1"
+
+if [ -z "$2" ] || [ "$2" == "." ] || [ "$2" == "-" ]; then
+	server="$(hostname --fqdn)"
+else
+	server="${2%.cluenet.org}.cluenet.org"
+fi
+
+service="${3:-*}"
+
+if [ "$action" = "del" ]; then
+	echo "Removing access to $server:$service from $user"
+else
+	echo "Adding access to $server:$service to $user"
+fi
+
+#check_user "$user" ||
+#	die "User $user does not exist"
+
+check_ticket
+
+api hostadm "${action}authorizedhostservice" "$user" "$server" "$service"
+
+case "$?" in
+0)
+	;;
+1)
+	#echo "Access denied" >&2
+	exit 1;;
+16)
+	die "This user isn't authorized for ${server}:${service}";;
+20)
+	die "This user is already authorized for ${server}:${service}";;
+32)
+	die "User $user does not exit";;
+*)
+	die "Something bad happened. Error $?";;
+esac;

@@ -1,0 +1,67 @@
+#!/bin/bash
+source ~/bin/cn.common || exit
+
+function getcode {
+	local nick="$1"
+	api useradm initialvouch "$nick"
+}
+
+if [ -z "$1" ]; then
+cat <<EOF
+Usage: $(basename $0) [-w|-n] <nick>
+
+  -w, --warn      Override points check, only warn
+  -n, --no-check  Don't check points at all
+
+  The script will warn you if user has less than 125 points, unless you
+  specify either -w or -n
+
+EOF
+exit
+fi
+
+klist -s || kinit
+klist -s || exit
+
+if [ "$1" = "-w" -o "$1" = "--warn" ]; then
+	shift
+	force=y
+	warn="Warning: "
+elif [ "$1" = "-n" -o "$1" = "--no-check" ]; then
+	shift
+	force=s
+fi
+
+nick="$1"
+
+if [ "$force" = "s" ]; then
+	getcode "$nick"
+	exit
+fi
+
+points=$( api irc cluebot points "$nick" )
+
+if [ $? -gt 0 ]; then
+	echo "Point checking failed (error $? ${points})" >&2
+	exit
+fi
+
+points=$( echo "$points" | cut -f 2 -d ":" )
+
+function confirm {
+	if [ "$force" = "y" ]; then
+		getcode "$nick"
+	else
+		echo "Are you sure you want to vouch for this user?"
+	fi
+}
+
+if [ -z "$points" ]; then
+	echo "${warn}$nick is not in ClueBot database."
+	confirm
+elif [ "$points" -lt 125 ]; then
+	echo "${warn}$nick has only $points points."
+	confirm
+else
+	getcode "$nick"
+fi

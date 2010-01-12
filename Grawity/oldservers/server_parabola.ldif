@@ -1,0 +1,23 @@
+dn: cn=parabola,ou=servers,dc=cluenet,dc=org
+objectClass: server
+objectClass: serviceRequirementObject
+cn: parabola
+owner: uid=compwhizii,ou=people,dc=cluenet,dc=org
+authorizedAdministrator: uid=jercos,ou=people,dc=cluenet,dc=org
+ipAddress: home.compwhizii.net
+preresolveHostname: FALSE
+sshPort: 27015
+networkLan: cwii
+purpose: General shell server
+cpuSpeed: 2400
+ramSize: 768
+networkTxSpeed: 200
+networkRxSpeed: 1200
+cpuType: Core 2 Quad Q6600 (Only 2 core for VM)
+hddSize: 16
+operatingSystem: Debian 5.0 (Lenny)
+description: Parabola is a server hosted in a virtual machine on CWii's workst
+ ation.
+isActive: TRUE
+userAccessible: TRUE
+

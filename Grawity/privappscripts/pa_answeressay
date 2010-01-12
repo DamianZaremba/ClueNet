@@ -1,0 +1,73 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]; then
+	echo "Usage: $0 <Requirement>"
+	exit 1
+fi
+
+klist &>/dev/null
+if [ $? -ne 0 ]; then
+	echo 'You have not run kinit.  Please do so.'
+	exit 1
+fi
+MYUSER="`klist | grep 'Default principal' | cut -d : -f 2 | cut -d ' ' -f 2 | cut -d '@' -f 1`"
+if [ "a$MYUSER" = "a" ]; then echo Error.; exit 1; fi
+REQID="$1"
+
+echo "Fetching question from LDAP ..."
+
+QFILE="`ldapsearch -xLLLb ou=requirements,dc=cluenet,dc=org -ttT /tmp requirementID=$REQID requirementData | grep ^requirementData | cut -d / -f 3-`"
+if [ $? -ne 0 ]; then echo Error.; exit 1; fi
+if [ "a$QFILE" = "a" ]; then echo Error.; exit 1; fi
+
+AFILE="`tempfile`"
+
+echo "The question is:"
+cat $QFILE
+echo
+echo
+echo "Press enter when you're ready to answer."
+read
+nano $AFILE
+
+rm -f $QFILE
+
+echo
+
+echo "Done answering question."
+echo "Checking if you have responded to this requirement before ..."
+
+ldapsearch -xLLLAb responseUserID=${MYUSER},requirementID=${REQID},ou=requirements,dc=cluenet,dc=org responseUserID &>/dev/null
+R=$?
+if [ $R -eq 32 ]; then
+	echo "Creating new response ..."
+	remctl privapp.api.cluenet.org privapp newresponse $REQID
+	if [ $? -ne 0 ]; then echo Error.; exit 1; fi
+else
+	if [ $R -ne 0 ]; then echo Error.; exit 1; fi
+fi
+
+echo "Uploading your answer ..."
+
+cat <<EOF | ldapmodify -Q >/dev/null
+dn: responseUserID=${MYUSER},requirementID=${REQID},ou=requirements,dc=cluenet,dc=org
+changetype: modify
+replace: responseData
+responseData:< file://${AFILE}
+-
+replace: isActive
+isActive: TRUE
+-
+replace: isPublic
+isPublic: FALSE
+-
+
+EOF
+if [ $? -ne 0 ]; then echo Error.; exit 1; fi
+
+rm -f $AFILE
+
+echo "Done."
+
+exit 0
+
