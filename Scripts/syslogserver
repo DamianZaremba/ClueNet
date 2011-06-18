@@ -54,8 +54,11 @@
 			$ip = '';
 			$port = 0;
 			socket_recvfrom($udp, $buf, 512, 0, $ip, $port);
-			$buf = explode(' ', $buf, 4); $buf = $buf[3];
-			fwrite($irc, ':Syslog PRIVMSG #Syslog :(' . dechex(ip2long($ip)) . ') ' . $buf . "\n");
+			$buf = explode(' ', $buf, 4);
+			if(isset($buff[3])) {
+				$buf = str_replace(array("\n", "\r"), '', $buf[3]);
+				fwrite($irc, ':Syslog PRIVMSG #Syslog :(' . dechex(ip2long($ip)) . ') ' . $buf . "\n");
+			}
 			unset($buf);
 		}
 	}
