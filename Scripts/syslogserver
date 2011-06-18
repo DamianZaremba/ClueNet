@@ -1,0 +1,62 @@
+#!/usr/bin/php
+<?php
+	$link_server = "127.0.0.1";
+	$link_port = 7029;
+	$link_numeric = 2;
+	$link_password = "abc123";
+	$syslog_port = 3335;
+
+	declare(ticks = 1);
+
+	function sig_handler($signo) {
+		switch ($signo) {
+			case SIGCHLD:
+				while (($x = pcntl_waitpid(0, $status, WNOHANG)) != -1) {
+					if ($x == 0) break;
+					$status = pcntl_wexitstatus($status);
+				}
+				break;
+		}
+	}
+
+	pcntl_signal(SIGCHLD, "sig_handler");
+	$udp = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
+	socket_bind($udp, '0.0.0.0', $syslog_port);
+
+	while (1) {
+		$irc = fsockopen('tcp://' . $link_server, $link_port, $en, $es, 30);
+		if (!$irc) {
+			die($en . ' - ' . $es . "\n");
+		}
+		fwrite($irc, 'PASS ' . $link_password . "\n");
+		fwrite($irc, 'PROTOCTL NICKv2 NICKIP' . "\n");
+		fwrite($irc, 'SERVER syslog.cluenet.org ' . $link_numeric . ' :Cluenet syslog relay server' . "\n");
+		fwrite($irc, 'SVSKILL Syslog :Bye!' . "\n");
+		fwrite($irc, 'NICK Syslog 1 ' . time() . ' Syslog syslog.cluenet.org syslog.cluenet.org 0: Syslog bot' . "\n");
+		fwrite($irc, ':Syslog JOIN #syslog' . "\n");
+		fwrite($irc, 'MODE #syslog +aont Syslog Syslog' . "\n");
+		fwrite($irc, ':Syslog TOPIC #syslog :Cluenet Syslog relay channel | Add your server - http://cluenet.org/wiki/ClueNet:Syslog' . "\n");
+
+		if (pcntl_fork() == 0) {
+			while (!feof($irc)) {
+				$data = str_replace(array("\n", "\r"), '', fgets($irc, 1024));
+				$d = explode(' ', $data);
+
+				if (strtolower($d[0]) == 'ping') {
+					fwrite($irc, 'PONG ' . $d[1] . "\n");
+				}
+			}
+			die();
+		}
+
+		while (!feof($irc)) {
+			$buf = '';
+			$ip = '';
+			$port = 0;
+			socket_recvfrom($udp, $buf, 512, 0, $ip, $port);
+			$buf = explode(' ', $buf, 4); $buf = $buf[3];
+			fwrite($irc, ':Syslog PRIVMSG #Syslog :(' . dechex(ip2long($ip)) . ') ' . $buf . "\n");
+			unset($buf);
+		}
+	}
+?>
