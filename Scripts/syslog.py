@@ -5,8 +5,6 @@ from twisted.internet import protocol, reactor
 
 import logging
 import random
-from socket import inet_aton
-from struct import unpack
 
 IRC_SERVER = 'irc.cluenet.org'
 IRC_PORT = 6667
@@ -45,16 +43,10 @@ class SyslogBotProtocol(irc.IRCClient):
 		self.channels = channels
 
 	def SyslogListener_callback(self, host, data):
-		try:
-			host_packed = inet_aton(host)
-			host_unpacked = unpack("!L", host_packed)[0]
-			host = hex(host_unpacked)
-		except:
-			pass
-
+		processed_data = ' '.join(data.split(' ')[4:])
 		for channel in self.channels:
-			logger.debug('Sending "(%s) %s" to %s' % (channel, host, data))
-			self.msg(channel, "(%s) %s" % (host, data))
+			logger.debug('Sending "%s" to %s' % (channel, processed_data))
+			self.msg(channel, data)
 
 	def signedOn(self):
 		self.factory.SyslogCallback.callback = self.SyslogListener_callback
