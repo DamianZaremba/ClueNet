@@ -45,7 +45,7 @@ class SyslogBotProtocol(irc.IRCClient):
 	def SyslogListener_callback(self, host, data):
 		processed_data = ' '.join(data.split(' ')[4:])
 		for channel in self.channels:
-			logger.debug('Sending "%s" to %s' % (channel, processed_data))
+			logger.debug('Sending "%s" to %s' % (processed_data, channel))
 			self.msg(channel, data)
 
 	def signedOn(self):
